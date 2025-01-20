@@ -71,25 +71,59 @@ pub fn masked_softmax(y: &mut Tensor<f32>) {
 }
 
 pub fn rms_norm(y: &mut Tensor<f32>, x: &Tensor<f32>, w: &Tensor<f32>, epsilon: f32) {
-    todo!("实现 rms_norm，计算前做一些必要的检查会帮助你后续调试")
+    let len = y.shape()[0];
+    let n = y.shape()[1];
+    let _y = unsafe { y.data_mut() };
+    let _x = x.data();
+    let _w = w.data();
+
+    for i in 0..len {
+        let offset = i * n;
+	let sum = _x[offset..offset + n].iter().map(|x| x * x).sum::<f32>();
+	let weight = 1. / (sum / n as f32 + epsilon).sqrt();
+	for j in 0..n {
+            _y[offset + j] = _w[j] * weight * _x[offset + j];
+	}
+    }
 }
 
 // y = silu(x) * y
 // hint: this is an element-wise operation
 pub fn swiglu(y: &mut Tensor<f32>, x: &Tensor<f32>) {
-    // let len = y.size();
-    // assert!(len == x.size());
+    let len = y.size();
+    assert!(len == x.size());
 
-    // let _y = unsafe { y.data_mut() };
-    // let _x = x.data();
+    let _y = unsafe { y.data_mut() };
+    let _x = x.data();
 
-    todo!("实现 silu，这里给了一些前期准备工作的提示，你可以参考")
+    for i in 0..len {
+        let xi = _x[i];
+        let sigmoid_xi = 1.0 / (1.0 + (-xi).exp());
+        _y[i] = _y[i] * xi * sigmoid_xi;
+    }
 }
 
 // C = beta * C + alpha * A @ B^T
 // hint: You don't need to do an explicit transpose of B
 pub fn matmul_transb(c: &mut Tensor<f32>, beta: f32, a: &Tensor<f32>, b: &Tensor<f32>, alpha: f32) {
-    todo!("实现 matmul_transb，计算前做一些必要的检查会帮助你后续调试");
+    let m = c.shape()[0];
+    let n = c.shape()[1];
+    let k = a.shape()[1];
+    let c = unsafe { c.data_mut() };
+    let _a = a.data();
+    let _b = b.data();
+    for i in 0..m {
+        for j in 0..n {
+            c[i*n+j] *= beta;
+	}
+    }
+    for i in 0..m {
+        for j in 0..n {
+            for w in 0..k {
+                c[i*n+j] += alpha * _a[i*k+w] * _b[j*k+w];
+	    }
+	}
+    }
 }
 
 // Dot product of two tensors (treated as vectors)
